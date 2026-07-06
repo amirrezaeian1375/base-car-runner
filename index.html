@@ -6,26 +6,26 @@
   📄 License: MIT
   ❤️ Built for the Base Ecosystem
 -->
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<!-- Farcaster Frame v1 (Classic) -->
-<meta property="fc:frame" content="vNext" />
-<meta property="fc:frame:image" content="https://i.postimg.cc/bNLccGBw/1-1.jpg" />
-<meta property="fc:frame:button:1" content="🏎️ Play Base Car" />
-<meta property="fc:frame:button:1:action" content="link" />
-<meta property="fc:frame:button:1:target" content="https://base-car-runner.vercel.app/" />
-
-<!-- Farcaster Frame v2 (Next) -->
-<meta property="fc:frame:v2" content='{"version":"next","imageUrl":"https://i.postimg.cc/bNLccGBw/1-1.jpg","button":{"title":"Launch Base Car","action":{"type":"launch_frame","name":"Base Car","url":"https://base-car-runner.vercel.app/","splashImageUrl":"https://i.postimg.cc/bNLccGBw/1-1.jpg","splashBackgroundColor":"#0052ff"}}}' />
-
-<!-- Open Graph (For Preview) -->
-<meta property="og:title" content="Base Car On-Chain" />
-<meta property="og:image" content="https://i.postimg.cc/bNLccGBw/1-1.jpg" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Base Car | On-Chain Racing</title>
+    
+    <!-- Farcaster Frame v1 & v2 -->
+    <meta property="fc:frame" content="vNext" />
+    <meta property="fc:frame:image" content="https://i.postimg.cc/bNLccGBw/1-1.jpg" />
+    <meta property="fc:frame:button:1" content="🏎️ Play Base Car" />
+    <meta property="fc:frame:button:1:action" content="link" />
+    <meta property="fc:frame:button:1:target" content="https://base-car-runner.vercel.app/" />
+    <meta property="fc:frame:v2" content='{"version":"next","imageUrl":"https://i.postimg.cc/bNLccGBw/1-1.jpg","button":{"title":"Launch Base Car","action":{"type":"launch_frame","name":"Base Car","url":"https://base-car-runner.vercel.app/","splashImageUrl":"https://i.postimg.cc/bNLccGBw/1-1.jpg","splashBackgroundColor":"#0052ff"}}}' />
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    
     <style>
         body { margin: 0; background-color: #050505; font-family: 'Inter', sans-serif; overflow: hidden; color: white; }
         canvas { display: block; margin: 0 auto; box-shadow: 0 0 100px rgba(0, 82, 255, 0.2); background: #070707; }
@@ -79,13 +79,13 @@
         <!-- Game Over -->
         <div id="gameOverMenu" class="menu-box hidden">
             <h2 class="text-2xl font-bold mb-2 orbitron text-red-500">ENGINE CRASHED</h2>
-            <p class="text-gray-400 mb-4">Final Score: <span id="finalScoreDisplay" class="text-white font-bold">0</span></p>
+            <p class="text-gray-400 mb-4 text-sm font-bold">Final Score: <span id="finalScoreDisplay" class="text-white font-bold">0</span></p>
             <button id="submitScoreBtn" class="btn-base mb-2">CONNECT TO SUBMIT</button>
-            <button id="restartBtn" class="btn-base bg-transparent border border-blue-500 text-blue-500">RETRY</button>
+            <button id="restartBtn" class="btn-base bg-transparent border border-blue-500 text-blue-500 uppercase">Retry Race</button>
             
             <div class="mt-6 text-left">
                 <h3 class="text-[10px] orbitron text-blue-500 mb-2 border-b border-blue-900 pb-1 uppercase tracking-tighter">Global Leaderboard</h3>
-                <div id="leaderboardContent" class="text-[11px] space-y-1"></div>
+                <div id="leaderboardContent" class="text-[11px] space-y-1">Loading...</div>
             </div>
         </div>
 
@@ -99,7 +99,7 @@
                 <button onclick="shareOnX()" class="btn-base bg-black border border-gray-800">SHARE ON X</button>
                 <button onclick="shareOnFarcaster()" class="btn-base bg-[#8a63d2]">SHARE ON FARCASTER</button>
             </div>
-            <button onclick="closeShareMenu()" class="mt-4 text-xs text-gray-500 orbitron hover:text-white uppercase">Return to Menu</button>
+            <button onclick="closeShareMenu()" class="mt-4 text-xs text-gray-500 orbitron hover:text-white uppercase font-bold">Return to Menu</button>
         </div>
 
         <div id="countdown" class="text-9xl font-bold orbitron text-blue-500 hidden"></div>
@@ -109,6 +109,8 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const contractAddress = "0xcA6A81a6676cA9A976A867997D061C0a6F7f495f";
+        const BASE_CHAIN_ID = "0x2105"; // 8453 in Hex
+
         const abi = [
             "function submitScore(uint256 score) external",
             "function getTopScores() external view returns (tuple(address player, uint256 score, uint256 timestamp)[])"
@@ -134,82 +136,123 @@
         window.addEventListener('resize', initCanvas);
         initCanvas();
 
-        function movePlayer(dir) {
-            player.lane = Math.max(0, Math.min(2, player.lane + dir));
-            player.targetX = (laneWidth * player.lane) + (laneWidth/2 - player.w/2);
+        // --- Blockchain Functions ---
+
+        function formatAddress(addr) {
+            return addr.substring(0, 5) + "..." + addr.substring(addr.length - 4);
         }
 
-        window.addEventListener('keydown', e => {
-            if (e.code === 'KeyA' || e.code === 'ArrowLeft') movePlayer(-1);
-            if (e.code === 'KeyD' || e.code === 'ArrowRight') movePlayer(1);
-        });
+        async function loadLeaderboard() {
+            try {
+                // Public RPC for immediate load without wallet
+                const pubProvider = new ethers.JsonRpcProvider("https://mainnet.base.org");
+                const readContract = new ethers.Contract(contractAddress, abi, pubProvider);
+                const scores = await readContract.getTopScores();
+                
+                let html = "";
+                if (!scores || scores.length === 0) {
+                    html = "<div class='text-center text-gray-500 text-[10px]'>No records found on Base Mainnet.</div>";
+                } else {
+                    scores.forEach((s, i) => {
+                        html += `<div class="flex justify-between bg-white/5 p-2 rounded border-l-2 border-blue-500 shadow-sm">
+                            <span class="font-medium font-mono">${i+1}. ${formatAddress(s.player)}</span>
+                            <span class="text-blue-500 font-bold">${s.score}</span>
+                        </div>`;
+                    });
+                }
+                document.getElementById('leaderboardContent').innerHTML = html;
+            } catch (e) {
+                console.error("Leaderboard load failed:", e);
+                document.getElementById('leaderboardContent').innerHTML = "Sync error...";
+            }
+        }
 
-        canvas.addEventListener('touchstart', e => {
-            const touchX = e.touches[0].clientX;
-            if (touchX < window.innerWidth / 2) movePlayer(-1);
-            else movePlayer(1);
-        });
+        // Initial load
+        loadLeaderboard();
+
+        async function checkNetwork() {
+            if (!window.ethereum) return false;
+            const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+            if (chainId !== BASE_CHAIN_ID) {
+                try {
+                    await window.ethereum.request({
+                        method: 'wallet_switchEthereumChain',
+                        params: [{ chainId: BASE_CHAIN_ID }],
+                    });
+                    return true;
+                } catch (err) {
+                    if (err.code === 4902) {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: BASE_CHAIN_ID,
+                                chainName: 'Base Mainnet',
+                                nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                                rpcUrls: ['https://mainnet.base.org'],
+                                blockExplorerUrls: ['https://basescan.org']
+                            }]
+                        });
+                        return true;
+                    }
+                    return false;
+                }
+            }
+            return true;
+        }
 
         async function connectWallet() {
             if (window.ethereum) {
+                const onBase = await checkNetwork();
+                if (!onBase) return;
+
                 try {
                     provider = new ethers.BrowserProvider(window.ethereum);
                     signer = await provider.getSigner();
                     userAddress = await signer.getAddress();
                     contract = new ethers.Contract(contractAddress, abi, signer);
-                    document.getElementById('connectBtn').innerText = formatAddress(userAddress);
+                    document.getElementById('connectBtn').innerText = formatAddress(userAddress).toUpperCase();
                     updateSubmitButtonState();
                     loadLeaderboard();
-                } catch (e) { console.error("Wallet error:", e); }
-            } else { alert("Wallet not found. Try Rabby or MetaMask."); }
-        }
-
-        function formatAddress(addr) {
-            return addr.substring(0, 4) + "..." + addr.substring(addr.length - 4);
+                } catch (e) { console.error("Connection failed", e); }
+            } else { alert("Please install a wallet like Rabby or MetaMask."); }
         }
 
         function updateSubmitButtonState() {
             const btn = document.getElementById('submitScoreBtn');
             if (userAddress) {
-                btn.innerText = "SUBMIT ON-CHAIN";
+                btn.innerText = "SUBMIT TO BASE";
                 btn.onclick = submitToBlockchain;
             } else {
-                btn.innerText = "CONNECT WALLET";
+                btn.innerText = "CONNECT TO SUBMIT";
                 btn.onclick = connectWallet;
             }
         }
 
-        async function loadLeaderboard() {
-            if (!contract) return;
+        async function submitToBlockchain() {
+            const onBase = await checkNetwork();
+            if (!onBase) return;
+
             try {
-                const scores = await contract.getTopScores();
-                let html = "";
-                scores.forEach((s, i) => {
-                    html += `<div class="flex justify-between bg-white/5 p-2 rounded border-l-2 border-blue-500 shadow-sm">
-                        <span class="font-medium">${i+1}. ${formatAddress(s.player)}</span>
-                        <span class="text-blue-500 font-bold">${s.score}</span>
-                    </div>`;
-                });
-                document.getElementById('leaderboardContent').innerHTML = html || "No records yet";
-            } catch (e) { console.error("Leaderboard error:", e); }
+                const tx = await contract.submitScore(score);
+                document.getElementById('submitScoreBtn').innerText = "WAITING...";
+                await tx.wait();
+                document.getElementById('gameOverMenu').classList.add('hidden');
+                document.getElementById('shareMenu').classList.remove('hidden');
+                loadLeaderboard();
+            } catch (e) { alert("Transaction failed."); }
         }
 
+        // --- Game Logic ---
+
         function drawCar(x, y, color, isPlayer) {
-            // Tires
-            ctx.fillStyle = '#111';
+            ctx.fillStyle = '#111'; // Tires
             ctx.fillRect(x-4, y+10, 8, 18); ctx.fillRect(x+player.w-4, y+10, 8, 18);
             ctx.fillRect(x-4, y+55, 8, 18); ctx.fillRect(x+player.w-4, y+55, 8, 18);
-            
-            // Body - Using rect for compatibility
-            ctx.fillStyle = color;
+            ctx.fillStyle = color; // Body
             ctx.fillRect(x, y, player.w, player.h);
-            
-            // Cockpit/Glass
-            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillStyle = 'rgba(0,0,0,0.7)'; // Glass
             ctx.fillRect(x+8, y+15, player.w-16, 20);
-            
-            // Lights
-            ctx.fillStyle = isPlayer ? '#00f2ff' : '#ff3300';
+            ctx.fillStyle = isPlayer ? '#00f2ff' : '#ff3300'; // Lights
             ctx.fillRect(x+5, y, 10, 5); ctx.fillRect(x+player.w-15, y, 10, 5);
         }
 
@@ -217,7 +260,7 @@
             if (!gameActive) return;
             const speedBase = 4 + (score / 1500); 
             enemies.push({ lane: Math.floor(Math.random()*3), y: -100, speed: speedBase + Math.random()*3 });
-            setTimeout(spawnEnemy, Math.max(500, 1600 - score/10));
+            setTimeout(spawnEnemy, Math.max(500, 1600 - score/12));
         }
 
         function spawnItem() {
@@ -228,59 +271,39 @@
 
         function gameLoop() {
             if (!gameActive) return;
-            
-            // Movement
             player.x += (player.targetX - player.x) * 0.22;
             roadOffset = (roadOffset + (6 + score/1800)) % 60;
-            
-            // Clear Frame
-            ctx.fillStyle = '#070707';
-            ctx.fillRect(0,0,gameWidth, gameHeight);
-            
-            // Road Lines
+            ctx.fillStyle = '#070707'; ctx.fillRect(0,0,gameWidth, gameHeight);
             ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 3;
             for(let i=1; i<3; i++) {
                 ctx.beginPath(); ctx.moveTo(i*laneWidth, 0); ctx.lineTo(i*laneWidth, gameHeight); ctx.stroke();
             }
 
-            // Enemies
             for(let i = enemies.length - 1; i >= 0; i--) {
-                let en = enemies[i];
-                en.y += en.speed;
+                let en = enemies[i]; en.y += en.speed;
                 const enX = (laneWidth * en.lane) + (laneWidth/2 - player.w/2);
                 drawCar(enX, en.y, '#ff4444', false);
-                
                 if (en.y > gameHeight) enemies.splice(i, 1);
-                
                 if (Math.abs(player.x - enX) < 38 && Math.abs(player.y - en.y) < 70) {
-                    enemies.splice(i, 1);
-                    lives--;
+                    enemies.splice(i, 1); lives--;
                     document.getElementById('lives').innerText = "❤️".repeat(lives);
                     if (lives <= 0) gameOver();
                 }
             }
 
-            // Items
             for(let i = items.length - 1; i >= 0; i--) {
-                let it = items[i];
-                it.y += 4.5;
+                let it = items[i]; it.y += 4.5;
                 const itX = (laneWidth * it.lane) + laneWidth/2;
-                
-                ctx.fillStyle = '#00ff00';
-                ctx.beginPath(); ctx.arc(itX, it.y, 16, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = '#00ff00'; ctx.beginPath(); ctx.arc(itX, it.y, 16, 0, Math.PI*2); ctx.fill();
                 ctx.fillStyle = 'black'; ctx.font = 'bold 9px Orbitron'; ctx.fillText("GAS", itX-11, it.y+4);
-                
                 if (it.y > gameHeight) items.splice(i, 1);
-                
-                if (Math.abs(player.x - (itX-player.w/2)) < 38 && Math.abs(player.y - it.y) < 45) {
-                    items.splice(i, 1); 
-                    score += 100;
+                if (Math.abs(player.x - (itX-22)) < 38 && Math.abs(player.y - it.y) < 45) {
+                    items.splice(i, 1); score += 100;
                 }
             }
 
             drawCar(player.x, player.y, '#0052ff', true);
-            score++;
-            document.getElementById('currentScore').innerText = score;
+            score++; document.getElementById('currentScore').innerText = score;
             requestAnimationFrame(gameLoop);
         }
 
@@ -290,16 +313,6 @@
             document.getElementById('finalScoreDisplay').innerText = score;
             updateSubmitButtonState();
             loadLeaderboard();
-        }
-
-        async function submitToBlockchain() {
-            try {
-                const tx = await contract.submitScore(score);
-                document.getElementById('submitScoreBtn').innerText = "SYNCING...";
-                await tx.wait();
-                document.getElementById('gameOverMenu').classList.add('hidden');
-                document.getElementById('shareMenu').classList.remove('hidden');
-            } catch (e) { console.error("Submit failed:", e); }
         }
 
         function shareOnX() {
@@ -317,6 +330,21 @@
             document.getElementById('startMenu').classList.remove('hidden');
         }
 
+        // --- Controls ---
+        window.addEventListener('keydown', e => {
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') movePlayer(-1);
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') movePlayer(1);
+        });
+        canvas.addEventListener('touchstart', e => {
+            const touchX = e.touches[0].clientX;
+            if (touchX < window.innerWidth / 2) movePlayer(-1);
+            else movePlayer(1);
+        });
+        function movePlayer(dir) {
+            player.lane = Math.max(0, Math.min(2, player.lane + dir));
+            player.targetX = (laneWidth * player.lane) + (laneWidth/2 - player.w/2);
+        }
+
         document.getElementById('startBtn').onclick = () => {
             document.getElementById('startMenu').classList.add('hidden');
             const cd = document.getElementById('countdown');
@@ -326,14 +354,9 @@
                 c--;
                 if(c === 0) cd.innerText = "GO!";
                 else if(c < 0) {
-                    clearInterval(timer); 
-                    cd.classList.add('hidden');
-                    gameActive = true; 
-                    score = 0; lives = 3; enemies = []; items = [];
-                    initCanvas(); 
-                    requestAnimationFrame(gameLoop); 
-                    spawnEnemy(); 
-                    spawnItem();
+                    clearInterval(timer); cd.classList.add('hidden');
+                    gameActive = true; score = 0; lives = 3; enemies = []; items = [];
+                    initCanvas(); requestAnimationFrame(gameLoop); spawnEnemy(); spawnItem();
                 } else cd.innerText = c;
             }, 1000);
         };

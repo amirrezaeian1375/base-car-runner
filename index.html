@@ -44,7 +44,7 @@
 </head>
 <body>
 
-    <div id="stats" class="orbitron">
+    <div id="stats" class="orbitron text-xs">
         <div class="stat-card">SCORE: <span id="currentScore" class="text-blue-500">0</span></div>
         <div class="stat-card text-right">LIVES: <span id="lives">❤️❤️❤️</span></div>
     </div>
@@ -62,12 +62,12 @@
                 </div>
             </div>
             <h1 class="text-4xl font-bold orbitron text-white mb-1 tracking-tight">BASE <span class="text-blue-500">CAR</span></h1>
-            <p class="text-gray-400 text-[10px] uppercase tracking-widest mb-6 font-bold">On-Chain High Speed Racing</p>
+            <p class="text-gray-400 text-[10px] uppercase tracking-widest mb-6 font-bold">On-Chain Racing V2</p>
             
-            <input type="text" id="playerName" placeholder="ENTER PILOT NAME" class="w-full p-3 mb-4 bg-gray-900 border border-gray-800 rounded-xl text-white outline-none focus:border-blue-500 text-center orbitron text-xs">
+            <input type="text" id="playerName" maxlength="15" placeholder="ENTER PILOT NAME *" class="w-full p-3 mb-4 bg-gray-900 border border-gray-800 rounded-xl text-white outline-none focus:border-blue-500 text-center orbitron text-xs shadow-inner">
             
-            <button id="connectBtn" class="btn-base bg-gray-800 border border-gray-700 mb-2">CONNECT WALLET</button>
-            <button id="startBtn" class="btn-base">START ENGINE</button>
+            <button id="connectBtn" class="btn-base bg-gray-800 border border-gray-700 mb-2 uppercase">Connect Wallet</button>
+            <button id="startBtn" class="btn-base uppercase">Start Engine</button>
 
             <div class="footer-links mt-8 flex flex-wrap justify-center gap-2">
                 <a href="https://github.com/amirrezaeian1375/base-car-runner" target="_blank">Repository</a>
@@ -78,28 +78,28 @@
 
         <!-- Game Over -->
         <div id="gameOverMenu" class="menu-box hidden">
-            <h2 class="text-2xl font-bold mb-2 orbitron text-red-500">ENGINE CRASHED</h2>
-            <p class="text-gray-400 mb-4 text-sm font-bold">Final Score: <span id="finalScoreDisplay" class="text-white font-bold">0</span></p>
-            <button id="submitScoreBtn" class="btn-base mb-2">CONNECT TO SUBMIT</button>
+            <h2 class="text-2xl font-bold mb-2 orbitron text-red-500">MISSION FAILED</h2>
+            <p class="text-gray-400 mb-4 text-sm font-bold uppercase">Pilot Score: <span id="finalScoreDisplay" class="text-white font-bold">0</span></p>
+            <button id="submitScoreBtn" class="btn-base mb-2 uppercase">Connect to Submit</button>
             <button id="restartBtn" class="btn-base bg-transparent border border-blue-500 text-blue-500 uppercase">Retry Race</button>
             
             <div class="mt-6 text-left">
-                <h3 class="text-[10px] orbitron text-blue-500 mb-2 border-b border-blue-900 pb-1 uppercase tracking-tighter">Global Leaderboard</h3>
-                <div id="leaderboardContent" class="text-[11px] space-y-1">Loading...</div>
+                <h3 class="text-[10px] orbitron text-blue-500 mb-2 border-b border-blue-900 pb-1 uppercase tracking-tighter">Top 10 Legends</h3>
+                <div id="leaderboardContent" class="text-[11px] space-y-1">Loading Scores...</div>
             </div>
         </div>
 
         <!-- Share Menu -->
         <div id="shareMenu" class="menu-box hidden">
             <div class="text-green-500 text-4xl mb-2">✓</div>
-            <h2 class="text-xl font-bold mb-1 orbitron text-white">SCORE SYNCED</h2>
-            <p class="text-gray-400 text-xs mb-6 font-bold uppercase">Transaction confirmed on Base</p>
+            <h2 class="text-xl font-bold mb-1 orbitron text-white">SYNC COMPLETED</h2>
+            <p class="text-gray-400 text-xs mb-6 font-bold uppercase">Record saved on Base Mainnet</p>
             
             <div class="flex flex-col gap-2">
                 <button onclick="shareOnX()" class="btn-base bg-black border border-gray-800">SHARE ON X</button>
                 <button onclick="shareOnFarcaster()" class="btn-base bg-[#8a63d2]">SHARE ON FARCASTER</button>
             </div>
-            <button onclick="closeShareMenu()" class="mt-4 text-xs text-gray-500 orbitron hover:text-white uppercase font-bold">Return to Menu</button>
+            <button onclick="location.reload()" class="mt-4 text-xs text-gray-500 orbitron hover:text-white uppercase font-bold">Main Menu</button>
         </div>
 
         <div id="countdown" class="text-9xl font-bold orbitron text-blue-500 hidden"></div>
@@ -108,12 +108,12 @@
     <script>
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        const contractAddress = "0xcA6A81a6676cA9A976A867997D061C0a6F7f495f";
-        const BASE_CHAIN_ID = "0x2105"; // 8453 in Hex
+        const contractAddress = "0x399e108991F622A7f7455BA97Bd3ad1D507625ae";
+        const BASE_CHAIN_ID = "0x2105"; // Base Mainnet Hex
 
         const abi = [
-            "function submitScore(uint256 score) external",
-            "function getTopScores() external view returns (tuple(address player, uint256 score, uint256 timestamp)[])"
+            "function submitScore(string memory _name, uint256 _score) external",
+            "function getTopScores() external view returns (tuple(address player, string name, uint256 score, uint256 timestamp)[])"
         ];
 
         let provider, signer, contract, userAddress;
@@ -138,36 +138,33 @@
 
         // --- Blockchain Functions ---
 
-        function formatAddress(addr) {
-            return addr.substring(0, 5) + "..." + addr.substring(addr.length - 4);
-        }
+        function formatAddr(addr) { return addr.substring(0, 5) + "..." + addr.substring(addr.length - 4); }
 
         async function loadLeaderboard() {
             try {
-                // Public RPC for immediate load without wallet
                 const pubProvider = new ethers.JsonRpcProvider("https://mainnet.base.org");
                 const readContract = new ethers.Contract(contractAddress, abi, pubProvider);
                 const scores = await readContract.getTopScores();
                 
                 let html = "";
                 if (!scores || scores.length === 0) {
-                    html = "<div class='text-center text-gray-500 text-[10px]'>No records found on Base Mainnet.</div>";
+                    html = "<div class='text-center text-gray-500 text-[10px]'>No records yet. Be the first legend!</div>";
                 } else {
                     scores.forEach((s, i) => {
+                        const displayName = s.name.trim() !== "" ? s.name : formatAddr(s.player);
                         html += `<div class="flex justify-between bg-white/5 p-2 rounded border-l-2 border-blue-500 shadow-sm">
-                            <span class="font-medium font-mono">${i+1}. ${formatAddress(s.player)}</span>
+                            <span class="font-medium">${i+1}. ${displayName}</span>
                             <span class="text-blue-500 font-bold">${s.score}</span>
                         </div>`;
                     });
                 }
                 document.getElementById('leaderboardContent').innerHTML = html;
             } catch (e) {
-                console.error("Leaderboard load failed:", e);
+                console.error("Leaderboard error:", e);
                 document.getElementById('leaderboardContent').innerHTML = "Sync error...";
             }
         }
 
-        // Initial load
         loadLeaderboard();
 
         async function checkNetwork() {
@@ -175,10 +172,7 @@
             const chainId = await window.ethereum.request({ method: 'eth_chainId' });
             if (chainId !== BASE_CHAIN_ID) {
                 try {
-                    await window.ethereum.request({
-                        method: 'wallet_switchEthereumChain',
-                        params: [{ chainId: BASE_CHAIN_ID }],
-                    });
+                    await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: BASE_CHAIN_ID }] });
                     return true;
                 } catch (err) {
                     if (err.code === 4902) {
@@ -210,17 +204,17 @@
                     signer = await provider.getSigner();
                     userAddress = await signer.getAddress();
                     contract = new ethers.Contract(contractAddress, abi, signer);
-                    document.getElementById('connectBtn').innerText = formatAddress(userAddress).toUpperCase();
+                    document.getElementById('connectBtn').innerText = "CONNECTED: " + formatAddr(userAddress).toUpperCase();
                     updateSubmitButtonState();
                     loadLeaderboard();
                 } catch (e) { console.error("Connection failed", e); }
-            } else { alert("Please install a wallet like Rabby or MetaMask."); }
+            } else { alert("Wallet not found. Try Rabby or MetaMask."); }
         }
 
         function updateSubmitButtonState() {
             const btn = document.getElementById('submitScoreBtn');
             if (userAddress) {
-                btn.innerText = "SUBMIT TO BASE";
+                btn.innerText = "SUBMIT TO LEADERBOARD";
                 btn.onclick = submitToBlockchain;
             } else {
                 btn.innerText = "CONNECT TO SUBMIT";
@@ -232,33 +226,35 @@
             const onBase = await checkNetwork();
             if (!onBase) return;
 
+            const name = document.getElementById('playerName').value.trim() || "Anonymous";
+
             try {
-                const tx = await contract.submitScore(score);
-                document.getElementById('submitScoreBtn').innerText = "WAITING...";
+                const tx = await contract.submitScore(name, score);
+                document.getElementById('submitScoreBtn').innerText = "TRANSACTING...";
                 await tx.wait();
                 document.getElementById('gameOverMenu').classList.add('hidden');
                 document.getElementById('shareMenu').classList.remove('hidden');
                 loadLeaderboard();
-            } catch (e) { alert("Transaction failed."); }
+            } catch (e) { alert("Transaction failed. Check your gas!"); }
         }
 
         // --- Game Logic ---
 
         function drawCar(x, y, color, isPlayer) {
-            ctx.fillStyle = '#111'; // Tires
+            ctx.fillStyle = '#111';
             ctx.fillRect(x-4, y+10, 8, 18); ctx.fillRect(x+player.w-4, y+10, 8, 18);
             ctx.fillRect(x-4, y+55, 8, 18); ctx.fillRect(x+player.w-4, y+55, 8, 18);
-            ctx.fillStyle = color; // Body
+            ctx.fillStyle = color;
             ctx.fillRect(x, y, player.w, player.h);
-            ctx.fillStyle = 'rgba(0,0,0,0.7)'; // Glass
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
             ctx.fillRect(x+8, y+15, player.w-16, 20);
-            ctx.fillStyle = isPlayer ? '#00f2ff' : '#ff3300'; // Lights
+            ctx.fillStyle = isPlayer ? '#00f2ff' : '#ff3300';
             ctx.fillRect(x+5, y, 10, 5); ctx.fillRect(x+player.w-15, y, 10, 5);
         }
 
         function spawnEnemy() {
             if (!gameActive) return;
-            const speedBase = 4 + (score / 1500); 
+            const speedBase = 4 + (score / 1400); 
             enemies.push({ lane: Math.floor(Math.random()*3), y: -100, speed: speedBase + Math.random()*3 });
             setTimeout(spawnEnemy, Math.max(500, 1600 - score/12));
         }
@@ -316,18 +312,13 @@
         }
 
         function shareOnX() {
-            const text = `I just reached ${score} points on Base Car! 🏎️🔵\n\nChallenge me on Base Mainnet.\n\nBuilt by @amirrezaeian75 on X.\n\nPlay here:`;
+            const text = `I just reached ${score} points on Base Car! 🏎️🔵\n\nBuilt by @amirrezaeian75. Play:`;
             window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.href)}`, '_blank');
         }
 
         function shareOnFarcaster() {
-            const text = `I just scored ${score} on Base Car! 🏎️🔵 Can you beat my on-chain record?\n\nFollow the builder: @amirrezaeian`;
+            const text = `I just scored ${score} on Base Car! 🏎️🔵 Follow @amirrezaeian`;
             window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(window.location.href)}`, '_blank');
-        }
-
-        function closeShareMenu() {
-            document.getElementById('shareMenu').classList.add('hidden');
-            document.getElementById('startMenu').classList.remove('hidden');
         }
 
         // --- Controls ---
@@ -346,6 +337,11 @@
         }
 
         document.getElementById('startBtn').onclick = () => {
+            const nameInput = document.getElementById('playerName').value.trim();
+            if(!nameInput) {
+                alert("PLEASE ENTER YOUR PILOT NAME TO START ENGINE!");
+                return;
+            }
             document.getElementById('startMenu').classList.add('hidden');
             const cd = document.getElementById('countdown');
             cd.classList.remove('hidden');

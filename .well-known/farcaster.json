@@ -1,0 +1,17 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOiA0MTk0MTksICJ0eXBlIjogImN1c3RvZHkiLCAia2V5IjogIjB4Mjg0OThmNjI4ZTE4ODRjMThhMzhjMzhjMzhjMzhjMzhjMzhjMzgiLCAic2lnIjogIjB4In0",
+    "payload": "{}",
+    "signature": "0x"
+  },
+  "frame": {
+    "version": "1",
+    "name": "Base Car",
+    "iconUrl": "https://i.postimg.cc/bNLccGBw/1-1.jpg",
+    "splashImageUrl": "https://i.postimg.cc/bNLccGBw/1-1.jpg",
+    "splashBackgroundColor": "#0052ff",
+    "imageUrl": "https://i.postimg.cc/bNLccGBw/1-1.jpg",
+    "buttonTitle": "Play Base Car",
+    "webhookUrl": ""
+  }
+}

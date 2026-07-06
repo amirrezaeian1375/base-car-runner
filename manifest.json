@@ -1,0 +1,15 @@
+{
+  "short_name": "Base Car",
+  "name": "Base Car On-Chain Runner",
+  "icons": [
+    {
+      "src": "https://i.postimg.cc/bNLccGBw/1-1.jpg",
+      "sizes": "192x192",
+      "type": "image/jpg"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#0052ff",
+  "background_color": "#050505"
+}

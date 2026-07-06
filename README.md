@@ -36,7 +36,7 @@
 Transparency is at the heart of Base Car. All high scores are verified and stored via our smart contract.
 
 - **Network:** Base Mainnet (Chain ID: `8453`)
-- **Contract Address:** `0xcA6A81a6676cA9A976A867997D061C0a6F7f495f`
+- **Contract Address:** `0x399e108991F622A7f7455BA97Bd3ad1D507625ae`
 
 ### Contract Interface (ABI)
 ```javascript

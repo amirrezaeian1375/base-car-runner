@@ -1,10 +1,10 @@
 # 🏎️ Base Car | On-Chain Racing Experience
 
-![Base Car Runner](https://i.postimg.cc/bNLccGBw/1-1.jpg)
+![Base Car Runner by 0x4m1r](https://i.postimg.cc/bNLccGBw/1-1.jpg)
 
 **Base Car** is a high-speed, 3-lane arcade racer built on the **Base Mainnet**. Challenge your reflexes, dodge high-speed AI traffic, collect **GAS** items, and etch your name into history on our verifiable on-chain leaderboard.
 
-🚀 **[LIVE DEMO - PLAY NOW]([REPLACING_SOON_WITH_VERCEL_LINK])**
+🚀 **[LIVE DEMO - PLAY NOW](https://base-car-runner.vercel.app/)**
 
 ---
 

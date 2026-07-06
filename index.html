@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Base Car | On-Chain Racing</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body { margin: 0; background-color: #050505; font-family: 'Inter', sans-serif; overflow: hidden; color: white; }
+        canvas { display: block; margin: 0 auto; box-shadow: 0 0 100px rgba(0, 82, 255, 0.2); background: #070707; }
+        .orbitron { font-family: 'Orbitron', sans-serif; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .menu-box { background: rgba(10, 10, 10, 0.98); border: 1px solid #0052ff; padding: 2rem; border-radius: 1.5rem; text-align: center; pointer-events: auto; width: 90%; max-width: 420px; backdrop-filter: blur(15px); }
+        .btn-base { background: #0052ff; color: white; padding: 12px 24px; border-radius: 12px; font-weight: bold; transition: all 0.2s; cursor: pointer; border: none; width: 100%; margin-top: 10px; font-family: 'Orbitron', sans-serif; font-size: 0.8rem; }
+        .btn-base:hover { background: #0043d1; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(0, 82, 255, 0.4); }
+        #stats { position: absolute; top: 20px; width: 100%; display: flex; justify-content: space-between; padding: 0 20px; pointer-events: none; z-index: 10; }
+        .stat-card { background: rgba(0,0,0,0.8); padding: 10px 15px; border-radius: 12px; border-left: 4px solid #0052ff; min-width: 100px; }
+        .hidden { display: none !important; }
+        .avatar-circle { width: 55px; height: 55px; border-radius: 50%; border: 2px solid #0052ff; object-fit: cover; background: #111; }
+        .footer-links a { color: #555; transition: 0.3s; margin: 0 8px; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold; }
+        .footer-links a:hover { color: #0052ff; }
+    </style>
+</head>
+<body>
+
+    <div id="stats" class="orbitron">
+        <div class="stat-card">SCORE: <span id="currentScore" class="text-blue-500">0</span></div>
+        <div class="stat-card text-right">LIVES: <span id="lives">❤️❤️❤️</span></div>
+    </div>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="ui-layer">
+        <!-- Main Menu -->
+        <div id="startMenu" class="menu-box">
+            <div class="flex items-center justify-center gap-3 mb-6">
+                <img src="https://i.postimg.cc/bNLccGBw/1-1.jpg" class="avatar-circle" alt="amirrezaeian">
+                <div class="text-left">
+                    <p class="text-[9px] orbitron text-blue-500 leading-none mb-1">Made with</p>
+                    <p class="text-sm font-bold leading-none orbitron tracking-tight">amirrezaeian</p>
+                </div>
+            </div>
+            <h1 class="text-4xl font-bold orbitron text-white mb-1 tracking-tight">BASE <span class="text-blue-500">CAR</span></h1>
+            <p class="text-gray-400 text-[10px] uppercase tracking-widest mb-6 font-bold">On-Chain High Speed Racing</p>
+            
+            <input type="text" id="playerName" placeholder="ENTER PILOT NAME" class="w-full p-3 mb-4 bg-gray-900 border border-gray-800 rounded-xl text-white outline-none focus:border-blue-500 text-center orbitron text-xs">
+            
+            <button id="connectBtn" class="btn-base bg-gray-800 border border-gray-700 mb-2">CONNECT WALLET</button>
+            <button id="startBtn" class="btn-base">START ENGINE</button>
+
+            <div class="footer-links mt-8 flex flex-wrap justify-center gap-2">
+                <a href="https://github.com/amirrezaeian1375/base-car-runner" target="_blank">Repository</a>
+                <a href="https://x.com/amirrezaeian75" target="_blank">X</a>
+                <a href="https://farcaster.xyz/amirrezaeian" target="_blank">Farcaster</a>
+            </div>
+        </div>
+
+        <!-- Game Over -->
+        <div id="gameOverMenu" class="menu-box hidden">
+            <h2 class="text-2xl font-bold mb-2 orbitron text-red-500">ENGINE CRASHED</h2>
+            <p class="text-gray-400 mb-4">Final Score: <span id="finalScoreDisplay" class="text-white font-bold">0</span></p>
+            <button id="submitScoreBtn" class="btn-base mb-2">CONNECT TO SUBMIT</button>
+            <button id="restartBtn" class="btn-base bg-transparent border border-blue-500 text-blue-500">RETRY</button>
+            
+            <div class="mt-6 text-left">
+                <h3 class="text-[10px] orbitron text-blue-500 mb-2 border-b border-blue-900 pb-1 uppercase tracking-tighter">Global Leaderboard</h3>
+                <div id="leaderboardContent" class="text-[11px] space-y-1"></div>
+            </div>
+        </div>
+
+        <!-- Share Menu -->
+        <div id="shareMenu" class="menu-box hidden">
+            <div class="text-green-500 text-4xl mb-2">✓</div>
+            <h2 class="text-xl font-bold mb-1 orbitron text-white">SCORE SYNCED</h2>
+            <p class="text-gray-400 text-xs mb-6 font-bold uppercase">Transaction confirmed on Base</p>
+            
+            <div class="flex flex-col gap-2">
+                <button onclick="shareOnX()" class="btn-base bg-black border border-gray-800">SHARE ON X</button>
+                <button onclick="shareOnFarcaster()" class="btn-base bg-[#8a63d2]">SHARE ON FARCASTER</button>
+            </div>
+            <button onclick="closeShareMenu()" class="mt-4 text-xs text-gray-500 orbitron hover:text-white uppercase">Return to Menu</button>
+        </div>
+
+        <div id="countdown" class="text-9xl font-bold orbitron text-blue-500 hidden"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const contractAddress = "0xcA6A81a6676cA9A976A867997D061C0a6F7f495f";
+        const abi = [
+            "function submitScore(uint256 score) external",
+            "function getTopScores() external view returns (tuple(address player, uint256 score, uint256 timestamp)[])"
+        ];
+
+        let provider, signer, contract, userAddress;
+        let score = 0, lives = 3, gameActive = false;
+        let gameWidth, gameHeight, laneWidth;
+        let player = { lane: 1, x: 0, y: 0, w: 45, h: 80, targetX: 0 };
+        let enemies = [], items = [], roadOffset = 0;
+
+        function initCanvas() {
+            gameWidth = Math.min(window.innerWidth, 420);
+            gameHeight = window.innerHeight;
+            canvas.width = gameWidth;
+            canvas.height = gameHeight;
+            laneWidth = gameWidth / 3;
+            player.x = (laneWidth * player.lane) + (laneWidth/2 - player.w/2);
+            player.targetX = player.x;
+            player.y = gameHeight - 150;
+        }
+
+        window.addEventListener('resize', initCanvas);
+        initCanvas();
+
+        function movePlayer(dir) {
+            player.lane = Math.max(0, Math.min(2, player.lane + dir));
+            player.targetX = (laneWidth * player.lane) + (laneWidth/2 - player.w/2);
+        }
+
+        window.addEventListener('keydown', e => {
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') movePlayer(-1);
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') movePlayer(1);
+        });
+
+        canvas.addEventListener('touchstart', e => {
+            const touchX = e.touches[0].clientX;
+            if (touchX < window.innerWidth / 2) movePlayer(-1);
+            else movePlayer(1);
+        });
+
+        async function connectWallet() {
+            if (window.ethereum) {
+                try {
+                    provider = new ethers.BrowserProvider(window.ethereum);
+                    signer = await provider.getSigner();
+                    userAddress = await signer.getAddress();
+                    contract = new ethers.Contract(contractAddress, abi, signer);
+                    document.getElementById('connectBtn').innerText = formatAddress(userAddress);
+                    updateSubmitButtonState();
+                    loadLeaderboard();
+                } catch (e) { console.error("Wallet error:", e); }
+            } else { alert("Wallet not found. Try Rabby or MetaMask."); }
+        }
+
+        function formatAddress(addr) {
+            return addr.substring(0, 4) + "..." + addr.substring(addr.length - 4);
+        }
+
+        function updateSubmitButtonState() {
+            const btn = document.getElementById('submitScoreBtn');
+            if (userAddress) {
+                btn.innerText = "SUBMIT ON-CHAIN";
+                btn.onclick = submitToBlockchain;
+            } else {
+                btn.innerText = "CONNECT WALLET";
+                btn.onclick = connectWallet;
+            }
+        }
+
+        async function loadLeaderboard() {
+            if (!contract) return;
+            try {
+                const scores = await contract.getTopScores();
+                let html = "";
+                scores.forEach((s, i) => {
+                    html += `<div class="flex justify-between bg-white/5 p-2 rounded border-l-2 border-blue-500 shadow-sm">
+                        <span class="font-medium">${i+1}. ${formatAddress(s.player)}</span>
+                        <span class="text-blue-500 font-bold">${s.score}</span>
+                    </div>`;
+                });
+                document.getElementById('leaderboardContent').innerHTML = html || "No records yet";
+            } catch (e) { console.error("Leaderboard error:", e); }
+        }
+
+        function drawCar(x, y, color, isPlayer) {
+            // Tires
+            ctx.fillStyle = '#111';
+            ctx.fillRect(x-4, y+10, 8, 18); ctx.fillRect(x+player.w-4, y+10, 8, 18);
+            ctx.fillRect(x-4, y+55, 8, 18); ctx.fillRect(x+player.w-4, y+55, 8, 18);
+            
+            // Body - Using rect for compatibility
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, player.w, player.h);
+            
+            // Cockpit/Glass
+            ctx.fillStyle = 'rgba(0,0,0,0.7)';
+            ctx.fillRect(x+8, y+15, player.w-16, 20);
+            
+            // Lights
+            ctx.fillStyle = isPlayer ? '#00f2ff' : '#ff3300';
+            ctx.fillRect(x+5, y, 10, 5); ctx.fillRect(x+player.w-15, y, 10, 5);
+        }
+
+        function spawnEnemy() {
+            if (!gameActive) return;
+            const speedBase = 4 + (score / 1500); 
+            enemies.push({ lane: Math.floor(Math.random()*3), y: -100, speed: speedBase + Math.random()*3 });
+            setTimeout(spawnEnemy, Math.max(500, 1600 - score/10));
+        }
+
+        function spawnItem() {
+            if (!gameActive) return;
+            items.push({ lane: Math.floor(Math.random()*3), y: -100 });
+            setTimeout(spawnItem, 4000);
+        }
+
+        function gameLoop() {
+            if (!gameActive) return;
+            
+            // Movement
+            player.x += (player.targetX - player.x) * 0.22;
+            roadOffset = (roadOffset + (6 + score/1800)) % 60;
+            
+            // Clear Frame
+            ctx.fillStyle = '#070707';
+            ctx.fillRect(0,0,gameWidth, gameHeight);
+            
+            // Road Lines
+            ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 3;
+            for(let i=1; i<3; i++) {
+                ctx.beginPath(); ctx.moveTo(i*laneWidth, 0); ctx.lineTo(i*laneWidth, gameHeight); ctx.stroke();
+            }
+
+            // Enemies
+            for(let i = enemies.length - 1; i >= 0; i--) {
+                let en = enemies[i];
+                en.y += en.speed;
+                const enX = (laneWidth * en.lane) + (laneWidth/2 - player.w/2);
+                drawCar(enX, en.y, '#ff4444', false);
+                
+                if (en.y > gameHeight) enemies.splice(i, 1);
+                
+                if (Math.abs(player.x - enX) < 38 && Math.abs(player.y - en.y) < 70) {
+                    enemies.splice(i, 1);
+                    lives--;
+                    document.getElementById('lives').innerText = "❤️".repeat(lives);
+                    if (lives <= 0) gameOver();
+                }
+            }
+
+            // Items
+            for(let i = items.length - 1; i >= 0; i--) {
+                let it = items[i];
+                it.y += 4.5;
+                const itX = (laneWidth * it.lane) + laneWidth/2;
+                
+                ctx.fillStyle = '#00ff00';
+                ctx.beginPath(); ctx.arc(itX, it.y, 16, 0, Math.PI*2); ctx.fill();
+                ctx.fillStyle = 'black'; ctx.font = 'bold 9px Orbitron'; ctx.fillText("GAS", itX-11, it.y+4);
+                
+                if (it.y > gameHeight) items.splice(i, 1);
+                
+                if (Math.abs(player.x - (itX-player.w/2)) < 38 && Math.abs(player.y - it.y) < 45) {
+                    items.splice(i, 1); 
+                    score += 100;
+                }
+            }
+
+            drawCar(player.x, player.y, '#0052ff', true);
+            score++;
+            document.getElementById('currentScore').innerText = score;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function gameOver() {
+            gameActive = false;
+            document.getElementById('gameOverMenu').classList.remove('hidden');
+            document.getElementById('finalScoreDisplay').innerText = score;
+            updateSubmitButtonState();
+            loadLeaderboard();
+        }
+
+        async function submitToBlockchain() {
+            try {
+                const tx = await contract.submitScore(score);
+                document.getElementById('submitScoreBtn').innerText = "SYNCING...";
+                await tx.wait();
+                document.getElementById('gameOverMenu').classList.add('hidden');
+                document.getElementById('shareMenu').classList.remove('hidden');
+            } catch (e) { console.error("Submit failed:", e); }
+        }
+
+        function shareOnX() {
+            const text = `I just reached ${score} points on Base Car! 🏎️🔵\n\nChallenge me on Base Mainnet.\n\nBuilt by @amirrezaeian75 on X.\n\nPlay here:`;
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(window.location.href)}`, '_blank');
+        }
+
+        function shareOnFarcaster() {
+            const text = `I just scored ${score} on Base Car! 🏎️🔵 Can you beat my on-chain record?\n\nFollow the builder: @amirrezaeian`;
+            window.open(`https://warpcast.com/~/compose?text=${encodeURIComponent(text)}&embeds[]=${encodeURIComponent(window.location.href)}`, '_blank');
+        }
+
+        function closeShareMenu() {
+            document.getElementById('shareMenu').classList.add('hidden');
+            document.getElementById('startMenu').classList.remove('hidden');
+        }
+
+        document.getElementById('startBtn').onclick = () => {
+            document.getElementById('startMenu').classList.add('hidden');
+            const cd = document.getElementById('countdown');
+            cd.classList.remove('hidden');
+            let c = 3; cd.innerText = c;
+            const timer = setInterval(() => {
+                c--;
+                if(c === 0) cd.innerText = "GO!";
+                else if(c < 0) {
+                    clearInterval(timer); 
+                    cd.classList.add('hidden');
+                    gameActive = true; 
+                    score = 0; lives = 3; enemies = []; items = [];
+                    initCanvas(); 
+                    requestAnimationFrame(gameLoop); 
+                    spawnEnemy(); 
+                    spawnItem();
+                } else cd.innerText = c;
+            }, 1000);
+        };
+
+        document.getElementById('connectBtn').onclick = connectWallet;
+        document.getElementById('restartBtn').onclick = () => {
+            document.getElementById('gameOverMenu').classList.add('hidden');
+            document.getElementById('startBtn').click();
+        };
+    </script>
+</body>
+</html>

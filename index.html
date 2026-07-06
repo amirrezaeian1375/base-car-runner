@@ -9,10 +9,19 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <!-- Farcaster Frame v2 -->
-<meta property="fc:frame" content='{"version":"next","imageUrl":"https://i.postimg.cc/bNLccGBw/1-1.jpg","button":{"title":"Play Base Car","action":{"type":"launch_frame","name":"Base Car","url":"https://base-car-runner.vercel.app/","splashImageUrl":"https://i.postimg.cc/bNLccGBw/1-1.jpg","splashBackgroundColor":"#0052ff"}}}' />
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- Farcaster Frame v1 (Classic) -->
+<meta property="fc:frame" content="vNext" />
+<meta property="fc:frame:image" content="https://i.postimg.cc/bNLccGBw/1-1.jpg" />
+<meta property="fc:frame:button:1" content="🏎️ Play Base Car" />
+<meta property="fc:frame:button:1:action" content="link" />
+<meta property="fc:frame:button:1:target" content="https://base-car-runner.vercel.app/" />
+
+<!-- Farcaster Frame v2 (Next) -->
+<meta property="fc:frame:v2" content='{"version":"next","imageUrl":"https://i.postimg.cc/bNLccGBw/1-1.jpg","button":{"title":"Launch Base Car","action":{"type":"launch_frame","name":"Base Car","url":"https://base-car-runner.vercel.app/","splashImageUrl":"https://i.postimg.cc/bNLccGBw/1-1.jpg","splashBackgroundColor":"#0052ff"}}}' />
+
+<!-- Open Graph (For Preview) -->
+<meta property="og:title" content="Base Car On-Chain" />
+<meta property="og:image" content="https://i.postimg.cc/bNLccGBw/1-1.jpg" />
     <title>Base Car | On-Chain Racing</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.0/ethers.umd.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>

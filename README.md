@@ -44,19 +44,3 @@ Transparency is at the heart of Base Car. All high scores are verified and store
   "function submitScore(uint256 score) external",
   "function getTopScores() external view returns (tuple(address player, uint256 score, uint256 timestamp)[])"
 ]
-🛠️ Tech Stack
-Game Engine: HTML5 Canvas / JavaScript
-Styling: Tailwind CSS
-Web3 Integration: ethers.js (MetaMask, Rabby, Coinbase Wallet)
-Deployment: Vercel
-👤 Developer
-amirrezaeian
-
-X (Twitter)
-Farcaster
-GitHub
-
-📄 License
-Distributed under the MIT License. See LICENSE for more information.
-
-Built with ❤️ for the Base ecosystem.
